@@ -1,0 +1,58 @@
+graph TD
+%% Định nghĩa các Style để sơ đồ trực quan hơn
+    classDef client fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef view fill:#fff2cc,stroke:#d6b656,stroke-width:2px;
+    classDef controller fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px;
+    classDef model fill:#d5e8d4,stroke:#82b366,stroke-width:2px;
+    classDef database fill:#f8cecc,stroke:#b85450,stroke-width:2px;
+
+%% Các thành phần hệ thống
+    Client[Trình duyệt của Người dùng]:::client
+
+    subgraph VIEW_LAYER [Tầng Giao Diện - View]
+        V_List[department-list.jsp<br/>Hiển thị bảng CRUD]:::view
+        V_Form[department-form.jsp<br/>Form Thêm/Sửa động]:::view
+    end
+
+    subgraph CONTROLLER_LAYER [Tầng Điều Phối]
+        C_Servlet[DepartmentServlet.java<br/>Phân luồng dựa theo '?action=...']:::controller
+    end
+
+    subgraph MODEL_LAYER [Tầng Dữ Liệu & Nghiệp Vụ]
+        E_Dept[Department.java<br/>Entity / POJO Chứa dữ liệu]:::model
+        M_DAO[DepartmentDAO.java<br/>Thực thi logic CRUD]:::model
+
+        subgraph JDBC_UTIL [Bộ Tiện Ích Hạ Tầng]
+            J_V1[JdbcV1<br/>Statement thô]:::model
+            J_V2[JdbcV2<br/>PreparedStatement]:::model
+            J_V3[JdbcV3<br/>CallableStatement]:::model
+        end
+    end
+
+    DB[(MS SQL Server<br/>Database: QLSV)]:::database
+
+%% Mối quan hệ và Luồng tương tác (Data Flow)
+    Client -->|1. HTTP GET/POST Request| C_Servlet
+
+%% Servlet tương tác với DAO và Entity
+    C_Servlet -->|2. Gọi hàm xử lý| M_DAO
+    C_Servlet --- |Khởi tạo & Đóng gói dữ liệu| E_Dept
+    M_DAO --- |Đổ dữ liệu vào mảng List| E_Dept
+
+%% DAO sử dụng hạ tầng JDBC
+    M_DAO -->|3. Gọi hàm tiện ích SQL| J_V2
+    M_DAO -->|3. Hoặc gọi Procedure| J_V3
+
+%% Bộ tiện ích bắn lệnh xuống Database
+    J_V2 ==>|4. Thực thi SQL| DB
+    J_V3 ==>|4. Thực thi Stored Procedure| DB
+
+%% Luồng phản hồi ngược lại View
+    J_V3 -.->|5. Trả kết quả ResultSet/int| M_DAO
+    C_Servlet -->|6. Đẩy dữ liệu ra Request Attribute| VIEW_LAYER
+    C_Servlet -->|7. Forward dữ liệu| V_List
+    C_Servlet -->|7. Forward dữ liệu| V_Form
+
+%% Kết xuất về Client
+    V_List -->|8. Render HTML hoàn chỉnh| Client
+    V_Form -->|8. Render HTML hoàn chỉnh| Client
